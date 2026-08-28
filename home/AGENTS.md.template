@@ -1,0 +1,35 @@
+# AGENTS.md
+
+Global agent instructions, installed to `~/AGENTS.md` by `install.sh`.
+`~/CLAUDE.md` just imports this file.
+
+## Git commit policy
+
+Commit autonomously; never ask whether or how to commit. The agent has standing
+authority to commit whenever a logical unit of work completes, and is expected to
+decide the grouping itself using the rules below — do not ask the user "should I
+commit?" or "one commit or split?". Just commit. This standing authority is
+commit-only; it grants no authority to push. It overrides the Beads
+"Conservative (default)" profile's "do not commit unless explicitly asked" for
+commits, while that profile's restriction on pushing and remote sync still fully
+applies.
+
+Group changes into logical commits. Don't lump unrelated work into one commit. If
+a session adds two distinct features (e.g. an exchange-rates page and a net-worth
+table), commit them separately, each in the state it's ready in — not batched at
+the end of the session into one commit.
+
+Commit as and when a logical unit of work completes, not just once at session
+end — this keeps history readable and each commit revertible on its own.
+
+Amend, don't stack, when tuning a feature added in the last few commits that
+haven't been pushed yet. A follow-up tweak to unpushed work (e.g. "make the table
+narrower" right after adding that table) belongs folded into the commit that
+introduced the feature, via `git commit --amend`, rather than creating a separate
+fixup commit — keep unpushed history clean since nobody else depends on it yet.
+Once a commit is pushed, stop amending it — add a new commit instead (never
+rewrite pushed history without being explicitly asked).
+
+Push only when explicitly instructed, and re-confirm before pushing again whenever
+new asks come in or other features/UI elements are adjusted since the last push —
+a prior "push" approval doesn't carry forward to later, unrelated changes.

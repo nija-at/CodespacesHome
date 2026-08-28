@@ -116,9 +116,19 @@ step_settings() {
   echo "settings merged"
 }
 
+# Installs the global agent instructions to ~/AGENTS.md, with ~/CLAUDE.md
+# importing it. Both are overwritten on every run so their content stays in
+# sync with this repo.
+step_global_agents() {
+  cp "$dotfiles_dir/home/AGENTS.md.template" "$HOME/AGENTS.md"
+  cp "$dotfiles_dir/home/CLAUDE.md.template" "$HOME/CLAUDE.md"
+  echo "global AGENTS.md and CLAUDE.md installed"
+}
+
 run_step "claude code" step_claude
 run_step "statusline" step_statusline
 run_step "settings" step_settings
+run_step "global agents" step_global_agents
 
 if [ -s "$STATUS_FILE" ]; then
   echo "dotfiles install finished with errors: $(tr '\n' ',' <"$STATUS_FILE" | sed 's/,$//')" >&2
