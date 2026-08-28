@@ -63,3 +63,20 @@ because the number looks higher.
 Pin the runtime/toolchain version explicitly (e.g. `.nvmrc`, `.python-version`,
 `rust-toolchain.toml`, `go.mod`'s `go` directive) and track the ecosystem's current
 stable/LTS line, updated deliberately, not automatically.
+
+## Ephemeral-environment principle
+
+Projects are built and run on ephemeral systems (fresh Codespaces, CI runners,
+throwaway containers). No setup survives between sessions unless it is committed to
+the repository. Therefore:
+
+Everything needed to build, run, and understand the project must live in the
+repository — build steps, dependencies, config, and the project's own docs
+(README/AGENTS.md).
+
+Do not rely on machine-local state, globally installed tools that aren't documented
+in the repo, or manual steps performed in a previous session.
+
+When you learn something non-obvious about building or running the project, record
+it in the repository (its README or AGENTS.md) so the next ephemeral session can
+pick up where you left off.
