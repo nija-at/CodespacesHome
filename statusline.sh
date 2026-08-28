@@ -45,8 +45,18 @@ if git -C "$raw_dir" rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+model=$(jq -r '.model.display_name // empty' <<<"$input")
+effort=$(jq -r '.effort.level // empty' <<<"$input")
+if [ -n "$model" ]; then
+  model_str="$model"
+  [ -n "$effort" ] && model_str+="/$effort"
+  left+=" ${DIM}|${RESET} ${GREEN}${model_str}${RESET}"
+  left_plain+=" | ${model_str}"
+fi
+
 ctx_pct=$(jq -r '.context_window.used_percentage // empty' <<<"$input")
 if [ -n "$ctx_pct" ]; then
+  ctx_pct=$(awk -v p="$ctx_pct" 'BEGIN { printf "%.0f", p }')
   c=$(color_for "$(pct_color "$ctx_pct")")
   left+=" ${DIM}|${RESET} ${DIM}ctx${RESET} ${c}${ctx_pct}%${RESET}"
   left_plain+=" | ctx ${ctx_pct}%"
@@ -56,7 +66,8 @@ fi
 right=""
 right_plain=""
 add_right() {
-  local label=$1 pct=$2 c
+  local label=$1 pct c
+  pct=$(awk -v p="$2" 'BEGIN { printf "%.0f", p }')
   c=$(color_for "$(pct_color "$pct")")
   if [ -n "$right_plain" ]; then
     right+=" ${DIM}|${RESET} "
