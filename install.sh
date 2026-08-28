@@ -111,8 +111,21 @@ step_statusline() {
   echo "statusline installed"
 }
 
+step_defaults() {
+  mkdir -p "$HOME/.claude"
+  local settings_file="$HOME/.claude/settings.json"
+  [ -f "$settings_file" ] || echo '{}' >"$settings_file"
+  local tmp_settings
+  tmp_settings=$(mktemp)
+  jq '.model = "claude-opus-4-8" | .effortLevel = "medium"' \
+    "$settings_file" >"$tmp_settings"
+  mv "$tmp_settings" "$settings_file"
+  echo "default model/effort configured"
+}
+
 run_step "claude code" step_claude
 run_step "statusline" step_statusline
+run_step "defaults" step_defaults
 
 if [ -s "$STATUS_FILE" ]; then
   echo "dotfiles install finished with errors: $(tr '\n' ',' <"$STATUS_FILE" | sed 's/,$//')" >&2
