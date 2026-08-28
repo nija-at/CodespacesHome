@@ -9,25 +9,21 @@ RESET='\033[0m'
 CYAN='\033[36m'
 DIM='\033[2m'
 GREEN='\033[32m'
-YELLOW='\033[33m'
-RED='\033[31m'
 PINK='\033[35m'
 
-# Color for a percentage: green < 50, yellow < 80, red >= 80.
-pct_color() {
-  awk -v p="$1" 'BEGIN {
-    if (p >= 80) print "red";
-    else if (p >= 50) print "yellow";
-    else print "green";
-  }'
-}
-
+# 256-color escape for a percentage, as a green->yellow->orange->red gradient
+# that deepens in five 20-point steps.
 color_for() {
-  case "$1" in
-    red) printf '%b' "$RED" ;;
-    yellow) printf '%b' "$YELLOW" ;;
-    green) printf '%b' "$GREEN" ;;
-  esac
+  local code
+  code=$(awk -v p="$1" 'BEGIN {
+    if      (p >= 80) c = 196;  # deep red
+    else if (p >= 60) c = 208;  # orange
+    else if (p >= 40) c = 220;  # amber
+    else if (p >= 20) c = 154;  # yellow-green
+    else              c = 46;   # green
+    print c;
+  }')
+  printf '\033[38;5;%sm' "$code"
 }
 
 raw_dir=$(jq -r '.workspace.current_dir // .cwd // "~"' <<<"$input")
@@ -57,7 +53,7 @@ fi
 ctx_pct=$(jq -r '.context_window.used_percentage // empty' <<<"$input")
 if [ -n "$ctx_pct" ]; then
   ctx_pct=$(awk -v p="$ctx_pct" 'BEGIN { printf "%.0f", p }')
-  c=$(color_for "$(pct_color "$ctx_pct")")
+  c=$(color_for "$ctx_pct")
   left+=" ${DIM}|${RESET} ${DIM}ctx${RESET} ${c}${ctx_pct}%${RESET}"
   left_plain+=" | ctx ${ctx_pct}%"
 fi
@@ -68,7 +64,7 @@ right_plain=""
 add_right() {
   local label=$1 pct c
   pct=$(awk -v p="$2" 'BEGIN { printf "%.0f", p }')
-  c=$(color_for "$(pct_color "$pct")")
+  c=$(color_for "$pct")
   if [ -n "$right_plain" ]; then
     right+=" ${DIM}|${RESET} "
     right_plain+=" | "
