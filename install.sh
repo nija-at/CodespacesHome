@@ -10,3 +10,17 @@ else
   echo "installing claude code..."
   curl -fsSL https://claude.ai/install.sh | bash
 fi
+
+# --- statusline ---
+dotfiles_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p "$HOME/.claude"
+cp "$dotfiles_dir/statusline.sh" "$HOME/.claude/statusline.sh"
+chmod +x "$HOME/.claude/statusline.sh"
+
+settings_file="$HOME/.claude/settings.json"
+[ -f "$settings_file" ] || echo '{}' >"$settings_file"
+tmp_settings=$(mktemp)
+jq '.statusLine = {"type": "command", "command": "~/.claude/statusline.sh", "padding": 1}' \
+  "$settings_file" >"$tmp_settings"
+mv "$tmp_settings" "$settings_file"
+echo "statusline installed"
