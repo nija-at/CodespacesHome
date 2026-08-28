@@ -11,6 +11,7 @@ DIM='\033[2m'
 GREEN='\033[32m'
 YELLOW='\033[33m'
 RED='\033[31m'
+PINK='\033[35m'
 
 # Color for a percentage: green < 50, yellow < 80, red >= 80.
 pct_color() {
@@ -29,35 +30,26 @@ color_for() {
   esac
 }
 
-fmt_tokens() {
-  local n=$1
-  if [ "$n" -ge 1000 ]; then
-    awk -v n="$n" 'BEGIN{printf "%.1fk", n/1000}'
-  else
-    printf '%s' "$n"
-  fi
-}
+raw_dir=$(jq -r '.workspace.current_dir // .cwd // "~"' <<<"$input")
+dir="${raw_dir/#$HOME/~}"
 
-dir=$(jq -r '.workspace.current_dir // .cwd // "~"' <<<"$input")
-dir="${dir/#$HOME/~}"
-
-# Left side: cwd + context usage.
+# Left side: cwd (+ git branch) + context usage.
 left="${CYAN}${dir}${RESET}"
 left_plain="$dir"
 
+if git -C "$raw_dir" rev-parse --git-dir >/dev/null 2>&1; then
+  branch=$(git -C "$raw_dir" branch --show-current 2>/dev/null)
+  if [ -n "$branch" ]; then
+    left+=" ${PINK}(${branch})${RESET}"
+    left_plain+=" ($branch)"
+  fi
+fi
+
 ctx_pct=$(jq -r '.context_window.used_percentage // empty' <<<"$input")
 if [ -n "$ctx_pct" ]; then
-  ctx_in=$(jq -r '.context_window.total_input_tokens // empty' <<<"$input")
-  ctx_size=$(jq -r '.context_window.context_window_size // empty' <<<"$input")
   c=$(color_for "$(pct_color "$ctx_pct")")
-  if [ -n "$ctx_in" ] && [ -n "$ctx_size" ]; then
-    tokens="($(fmt_tokens "$ctx_in")/$(fmt_tokens "$ctx_size"))"
-    left+=" ${DIM}|${RESET} ${DIM}ctx${RESET} ${c}${ctx_pct}%${RESET} ${DIM}${tokens}${RESET}"
-    left_plain+=" | ctx ${ctx_pct}% ${tokens}"
-  else
-    left+=" ${DIM}|${RESET} ${DIM}ctx${RESET} ${c}${ctx_pct}%${RESET}"
-    left_plain+=" | ctx ${ctx_pct}%"
-  fi
+  left+=" ${DIM}|${RESET} ${DIM}ctx${RESET} ${c}${ctx_pct}%${RESET}"
+  left_plain+=" | ctx ${ctx_pct}%"
 fi
 
 # Right side: rate-limit usage, right-aligned.
@@ -80,12 +72,19 @@ five_hour=$(jq -r '.rate_limits.five_hour.used_percentage // empty' <<<"$input")
 seven_day=$(jq -r '.rate_limits.seven_day.used_percentage // empty' <<<"$input")
 [ -n "$seven_day" ] && add_right "7d" "$seven_day"
 
-cols="${COLUMNS:-80}"
-if [ -n "$right_plain" ]; then
-  pad=$(( cols - ${#left_plain} - ${#right_plain} - 1 ))
-  [ "$pad" -lt 1 ] && pad=1
+# Reserve a safety margin for the statusLine's own padding/edges so the
+# right-aligned part never overflows and gets cut off.
+margin=4
+cols=$(( ${COLUMNS:-80} - margin ))
+needed=$(( ${#left_plain} + ${#right_plain} + 1 ))
+
+if [ -n "$right_plain" ] && [ "$needed" -le "$cols" ]; then
+  pad=$(( cols - ${#left_plain} - ${#right_plain} ))
   printf -v padding '%*s' "$pad" ""
   printf '%b\n' "${left}${padding}${right}"
+elif [ -n "$right_plain" ]; then
+  # Not enough room to right-align without overflowing; fall back to inline.
+  printf '%b\n' "${left} ${DIM}|${RESET} ${right}"
 else
   printf '%b\n' "$left"
 fi
