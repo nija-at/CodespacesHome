@@ -33,3 +33,33 @@ rewrite pushed history without being explicitly asked).
 Push only when explicitly instructed, and re-confirm before pushing again whenever
 new asks come in or other features/UI elements are adjusted since the last push —
 a prior "push" approval doesn't carry forward to later, unrelated changes.
+
+## Adding dependencies — version policy
+
+When adding a new dependency in any ecosystem (npm, pip/PyPI, Cargo, Go modules,
+Maven/Gradle, Composer, RubyGems, etc.), deliberately pick a stable version rather
+than whatever a floating `latest`/`*` tag happens to resolve to. The target is the
+package's stable release.
+
+Install the stable latest release, never a pre-release
+(alpha/beta/rc/canary/preview/experimental/next/snapshot/dev).
+
+Verify explicitly. Before or right after installing, query the registry for the
+package's published versions/tags and confirm the installed version is the stable
+latest and carries no pre-release suffix. Don't assume a floating "latest" tag is
+safe — check. Examples: `npm view <pkg> dist-tags`, `pip index versions <pkg>`,
+`cargo search <pkg>`, `go list -m -versions <mod>`, `gem list -r -e <pkg>`.
+
+Framework majors are a conscious choice. When the newest stable release is a
+brand-new major, weigh it against the previous, more battle-tested major and decide
+on purpose. Record the reasoning wherever the project tracks such decisions (issue
+tracker, a stack/decisions doc).
+
+Pre-1.0 packages are fine when 0.x is the stable line. Some mature, production-used
+packages are still pre-1.0 (e.g. drizzle-orm 0.x); using their stable latest is
+correct even though it's a 0.x version. Don't jump to their 1.0.0-beta/rc just
+because the number looks higher.
+
+Pin the runtime/toolchain version explicitly (e.g. `.nvmrc`, `.python-version`,
+`rust-toolchain.toml`, `go.mod`'s `go` directive) and track the ecosystem's current
+stable/LTS line, updated deliberately, not automatically.
