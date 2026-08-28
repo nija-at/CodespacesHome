@@ -98,34 +98,27 @@ step_claude() {
 
 step_statusline() {
   mkdir -p "$HOME/.claude"
-  cp "$dotfiles_dir/statusline.sh" "$HOME/.claude/statusline.sh"
+  cp "$dotfiles_dir/.claude/statusline.sh" "$HOME/.claude/statusline.sh"
   chmod +x "$HOME/.claude/statusline.sh"
-
-  local settings_file="$HOME/.claude/settings.json"
-  [ -f "$settings_file" ] || echo '{}' >"$settings_file"
-  local tmp_settings
-  tmp_settings=$(mktemp)
-  jq '.statusLine = {"type": "command", "command": "~/.claude/statusline.sh", "padding": 0}' \
-    "$settings_file" >"$tmp_settings"
-  mv "$tmp_settings" "$settings_file"
   echo "statusline installed"
 }
 
-step_defaults() {
+# Merges .claude/settings.json from this repo into ~/.claude/settings.json,
+# with the repo's values taking precedence over any existing keys.
+step_settings() {
   mkdir -p "$HOME/.claude"
   local settings_file="$HOME/.claude/settings.json"
   [ -f "$settings_file" ] || echo '{}' >"$settings_file"
   local tmp_settings
   tmp_settings=$(mktemp)
-  jq '.model = "claude-opus-4-8" | .effortLevel = "medium"' \
-    "$settings_file" >"$tmp_settings"
+  jq -s '.[0] * .[1]' "$settings_file" "$dotfiles_dir/.claude/settings.json" >"$tmp_settings"
   mv "$tmp_settings" "$settings_file"
-  echo "default model/effort configured"
+  echo "settings merged"
 }
 
 run_step "claude code" step_claude
 run_step "statusline" step_statusline
-run_step "defaults" step_defaults
+run_step "settings" step_settings
 
 if [ -s "$STATUS_FILE" ]; then
   echo "dotfiles install finished with errors: $(tr '\n' ',' <"$STATUS_FILE" | sed 's/,$//')" >&2
