@@ -20,7 +20,7 @@ chmod +x "$HOME/.claude/statusline.sh"
 settings_file="$HOME/.claude/settings.json"
 [ -f "$settings_file" ] || echo '{}' >"$settings_file"
 tmp_settings=$(mktemp)
-jq '.statusLine = {"type": "command", "command": "~/.claude/statusline.sh", "padding": 1}' \
+jq '.statusLine = {"type": "command", "command": "~/.claude/statusline.sh", "padding": 0}' \
   "$settings_file" >"$tmp_settings"
 mv "$tmp_settings" "$settings_file"
 echo "statusline installed"

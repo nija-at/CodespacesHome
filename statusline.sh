@@ -72,9 +72,9 @@ five_hour=$(jq -r '.rate_limits.five_hour.used_percentage // empty' <<<"$input")
 seven_day=$(jq -r '.rate_limits.seven_day.used_percentage // empty' <<<"$input")
 [ -n "$seven_day" ] && add_right "7d" "$seven_day"
 
-# Reserve a safety margin for the statusLine's own padding/edges so the
+# Reserve a safety margin for the interface's own edges/padding so the
 # right-aligned part never overflows and gets cut off.
-margin=4
+margin=8
 cols=$(( ${COLUMNS:-80} - margin ))
 needed=$(( ${#left_plain} + ${#right_plain} + 1 ))
 
