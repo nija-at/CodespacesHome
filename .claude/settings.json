@@ -5,5 +5,8 @@
     "padding": 0
   },
   "model": "claude-opus-4-8",
-  "effortLevel": "medium"
+  "effortLevel": "medium",
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": false
+  }
 }

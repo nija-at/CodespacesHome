@@ -116,6 +116,20 @@ step_settings() {
   echo "settings merged"
 }
 
+# Registers plugin marketplaces and installs the plugins this repo makes
+# available. Installing (rather than only declaring the marketplace) populates
+# ~/.claude/plugins/cache/, which doesn't survive between ephemeral codespaces.
+# Enablement is opt-in and handled separately: this repo's settings.json sets a
+# global default of `false` for each installed plugin, and individual project
+# repos flip the ones they want to `true` in their own .claude/settings.json.
+# Idempotent: `marketplace add` no-ops if already declared, and `install`
+# no-ops if the plugin is already present.
+step_plugins() {
+  claude plugin marketplace add anthropics/claude-plugins-official
+  claude plugin install frontend-design@claude-plugins-official
+  echo "plugins installed"
+}
+
 # Installs the global agent instructions to ~/AGENTS.md, with ~/CLAUDE.md
 # importing it. Both are overwritten on every run so their content stays in
 # sync with this repo.
@@ -128,6 +142,7 @@ step_global_agents() {
 run_step "claude code" step_claude
 run_step "statusline" step_statusline
 run_step "settings" step_settings
+run_step "plugins" step_plugins
 run_step "global agents" step_global_agents
 
 if [ -s "$STATUS_FILE" ]; then
