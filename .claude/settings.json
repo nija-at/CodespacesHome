@@ -6,6 +6,7 @@
   },
   "model": "claude-opus-4-8",
   "effortLevel": "medium",
+  "remoteControlAtStartup": false,
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": false
   }
