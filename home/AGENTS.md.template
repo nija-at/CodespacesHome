@@ -34,6 +34,38 @@ Push only when explicitly instructed, and re-confirm before pushing again whenev
 new asks come in or other features/UI elements are adjusted since the last push —
 a prior "push" approval doesn't carry forward to later, unrelated changes.
 
+## GitHub writes from a Codespace (comments, PR edits)
+
+A Codespace's `git`/`gh` authenticate with the auto-provisioned `GITHUB_TOKEN` —
+a `ghu_…` GitHub-App *installation* token, not a personal token. Its effective
+permission on any repo is `min(app-granted, the user's own access)`, which has
+two consequences that are easy to trip over:
+
+- On a repo the user only reads (e.g. an upstream you contribute to via a fork),
+  the token is effectively read-only: every write returns
+  `403 Resource not accessible by integration`. This includes posting a PR
+  comment and editing a PR title/description, because a PR lives in its *base*
+  repo — so a fork-based contribution can't be commented on or edited with this
+  token even though the PR head is the user's fork.
+- The token never carries the `workflow` scope, so even on the user's own repos
+  a push that touches `.github/workflows/**` is rejected.
+
+Because of this, **do not attempt to post a PR/issue comment or edit a PR title
+or description yourself** — it will usually fail, and even when it wouldn't, the
+user posts these under their own identity. Instead:
+
+1. Write the exact intended text (the comment body, or the new PR
+   title/description) to a markdown file and give the user its **full path** so
+   they can post it. Do not run `gh pr comment`, `gh pr edit`, or the equivalent
+   API call on the user's behalf.
+2. If the repo is configured with beads (`bd`), **also record the drafted text
+   verbatim in the relevant bead**, so the draft survives across sessions and
+   isn't lost if the file or the conversation is gone.
+
+(If the user has set up a personal-access-token Codespaces secret for a repo,
+they'll say so and how to use it; absent that, follow the file + bead handoff
+above.)
+
 ## Adding dependencies — version policy
 
 When adding a new dependency in any ecosystem (npm, pip/PyPI, Cargo, Go modules,
