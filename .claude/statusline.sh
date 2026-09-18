@@ -62,7 +62,7 @@ fi
 right=""
 right_plain=""
 add_right() {
-  local label=$1 pct c
+  local label=$1 pct c suffix=${3:-}
   pct=$(awk -v p="$2" 'BEGIN { printf "%.0f", p }')
   c=$(color_for "$pct")
   if [ -n "$right_plain" ]; then
@@ -71,10 +71,23 @@ add_right() {
   fi
   right+="${DIM}${label}${RESET} ${c}${pct}%${RESET}"
   right_plain+="${label} ${pct}%"
+  if [ -n "$suffix" ]; then
+    right+=" ${DIM}(${suffix})${RESET}"
+    right_plain+=" ($suffix)"
+  fi
 }
 
 five_hour=$(jq -r '.rate_limits.five_hour.used_percentage // empty' <<<"$input")
-[ -n "$five_hour" ] && add_right "5h" "$five_hour"
+if [ -n "$five_hour" ]; then
+  # Minutes until the 5h window resets, rounded up and clamped at 0.
+  five_reset=$(jq -r '.rate_limits.five_hour.resets_at // empty' <<<"$input")
+  mins_str=""
+  if [ -n "$five_reset" ]; then
+    mins=$(awk -v r="$five_reset" -v n="$(date +%s)" 'BEGIN { m = (r - n) / 60; if (m < 0) m = 0; printf "%d", (m == int(m) ? m : int(m) + 1) }')
+    mins_str="${mins} mins"
+  fi
+  add_right "5h" "$five_hour" "$mins_str"
+fi
 
 seven_day=$(jq -r '.rate_limits.seven_day.used_percentage // empty' <<<"$input")
 [ -n "$seven_day" ] && add_right "7d" "$seven_day"
