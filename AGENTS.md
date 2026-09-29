@@ -6,12 +6,16 @@ entry point Codespaces runs automatically — keep it idempotent and safe to re-
 ## Setup status + login banner (shared with project repos)
 
 `install.sh` prints one line per step (`[i/N] label… ✓ 2s` / `✗ FAILED`), then a
-totals line; full step output goes to `~/.codespace-setup.d/dotfiles.log`. It
+totals line; full step output goes to `~/.codespace-setup.d/dotfiles.log`. Those
+per-step lines are also saved to `~/.codespace-setup.d/dotfiles.summary`, because
+the terminal they print to is only the Codespaces creation log (never seen on
+login, and rewritten on resume). It
 records its state as the `dotfiles` component under `~/.codespace-setup.d/` and
 writes the login banner `~/.codespace-setup-login-check.sh`, which project setup
-scripts (e.g. `nija-at/strandufer`'s `scripts/setup.sh`) also write. The banner
-lists every component that's still running, was interrupted, or errored, or
-prints one green "setup complete" line naming them all.
+scripts (e.g. `nija-at/strandufer`'s `scripts/setup.sh`) also write. In every
+new terminal the banner replays each component's `.summary` lines, then lists
+every component that's still running, was interrupted, or errored, or prints
+one green "setup complete" line naming them all.
 
 The banner is duplicated rather than shared at runtime, so neither script
 depends on the other or on the order they run in. Keep `install_status_banner`

@@ -102,6 +102,26 @@ for sh in "${shells[@]}"; do
     echo "ok   [$sh/mixed-no-success]"
   fi
 
+  # per-step summary is replayed in every terminal, before the verdict line
+  h="$tmp/summary"; rm -rf "$h"; mkdir -p "$h/.codespace-setup.d"
+  : >"$h/.codespace-setup.d/demo.status"
+  printf '==> [1/2] step one… ✓ 3s\n==> Done: 2 succeeded, 0 failed in 5s\n' \
+    >"$h/.codespace-setup.d/demo.summary"
+  out="$(HOME="$h" "$sh" "$banner")"
+  check "$sh/summary-step-line" "[1/2] step one… ✓ 3s" "$out"
+  check "$sh/summary-done-line" "Done: 2 succeeded" "$out"
+  if [ "$(printf '%s\n' "$out" | grep -v '^[[:space:]]*$' | tail -n 1 | grep -c 'setup complete')" -eq 1 ]; then
+    echo "ok   [$sh/summary-verdict-last]"
+  else
+    echo "FAIL [$sh/summary-verdict-last]: verdict is not the last line: $out"; fail=1
+  fi
+
+  # summary also shown alongside errors (so you see which step failed)
+  printf 'step two: boom\n' >"$h/.codespace-setup.d/demo.status"
+  out="$(HOME="$h" "$sh" "$banner")"
+  check "$sh/summary-with-error" "[1/2] step one" "$out"
+  check "$sh/summary-error-detail" "step two: boom" "$out"
+
   # no state dir at all — must be silent
   h="$tmp/none"; rm -rf "$h"; mkdir -p "$h"
   check "$sh/nodir-silent" "-" "$(HOME="$h" "$sh" "$banner")"

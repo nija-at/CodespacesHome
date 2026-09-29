@@ -27,14 +27,18 @@ COMPONENT_LABEL="dotfiles (nija-at/CodespacesHome install.sh)"
 STATE_LOG="$STATE_DIR/$COMPONENT.log"
 STATE_STATUS="$STATE_DIR/$COMPONENT.status"
 STATE_RUNNING="$STATE_DIR/$COMPONENT.running"
+STATE_SUMMARY="$STATE_DIR/$COMPONENT.summary"
 
 dotfiles_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
-# term — print to the terminal only (fd 3, saved by status_begin), not the log.
-term() { printf '%s' "$*" >&3; }
-# say — print a full line to both the terminal and the log.
-say()  { printf '%s\n' "$*" >&3; printf '%s\n' "$*"; }
+# term — print to the terminal (fd 3, saved by status_begin) and STATE_SUMMARY,
+# not the log. The terminal here is only the Codespaces creation log, which you
+# never see on login (and which a resume rewrites), so the login banner replays
+# STATE_SUMMARY in every new terminal.
+term() { printf '%s' "$*" >&3; printf '%s' "$*" >>"$STATE_SUMMARY"; }
+# say — print a full line to the terminal, the summary, and the log.
+say()  { term "$*"$'\n'; printf '%s\n' "$*"; }
 
 # Safety net: if the script exits non-zero for a reason run_step never saw
 # (a bug in this orchestration code, an unset variable, ...), record a
@@ -58,6 +62,7 @@ status_begin() {
   mkdir -p "$STATE_DIR"
   : >"$STATE_STATUS"
   : >"$STATE_LOG"
+  : >"$STATE_SUMMARY"
   printf 'pid=%s\nstarted=%s\nlabel=%s\n' \
     "$$" "$(date -u +%FT%TZ)" "$COMPONENT_LABEL" >"$STATE_RUNNING"
   trap on_exit EXIT
@@ -65,16 +70,16 @@ status_begin() {
 }
 
 # install_status_banner — write the shell-rc login banner and wire it into
-# ~/.bashrc and ~/.zshrc (idempotent). The banner scans STATE_DIR and reports
-# any component that is still running, was interrupted, or logged errors; it is
-# silent when everything finished cleanly. Both this script and the dotfiles
+# ~/.bashrc and ~/.zshrc (idempotent). The banner scans STATE_DIR, replays each
+# component's per-step summary lines, and reports any component that is still
+# running, was interrupted, or logged errors (else one green "complete" line). Both this script and the dotfiles
 # install.sh install the identical banner, so whichever runs keeps it current.
 install_status_banner() {
   local check="$HOME/.codespace-setup-login-check.sh"
   cat >"$check" <<'BANNER'
 # Codespace setup status banner (auto-generated; sourced from your shell rc).
-# Heads-up when bootstrap scripts are still running, were interrupted, or hit
-# errors. Silent once everything has finished cleanly.
+# Replays each setup script's per-step ✓/✗ + timing lines, then a verdict: still
+# running, interrupted, errors, or a short green "complete" line.
 __codespace_setup_banner() {
   emulate -L sh 2>/dev/null || true   # zsh: sh-compat (no nomatch) scoped here
   dir="$HOME/.codespace-setup.d"
@@ -101,10 +106,17 @@ __codespace_setup_banner() {
       complete="${complete}${name} "
     fi
   done
+  # Per-step lines from each script's last run (what the Codespaces creation
+  # log showed, which you never see on login), shown in every terminal.
+  for f in "$dir"/*.summary; do
+    [ -s "$f" ] || continue
+    printf '\033[1m%s\033[0m\n' "$(basename "$f" .summary)"
+    sed 's/^/  /' "$f" 2>/dev/null
+    printf '\n'
+  done
   # Anything wrong takes priority and stays loud; otherwise a short green line
   # confirms the tracking is working and every component finished cleanly.
   if [ -n "$running$interrupted$errored" ]; then
-    printf '\n'
     if [ -n "$running" ]; then
       printf '\033[1;33m⏳ Codespace setup is still running:\033[0m\n'
       old_ifs=$IFS; IFS='|'; set -- $running; IFS=$old_ifs
@@ -130,7 +142,6 @@ __codespace_setup_banner() {
       done
     fi
     printf '   Fix, then re-run the setup script — or `rm -rf %s` to dismiss.\n' "$dir"
-    printf '\n'
   elif [ -n "$complete" ]; then
     set -- $complete
     names=$1; shift
